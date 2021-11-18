@@ -10,17 +10,13 @@ const initialState = {
   infos: []
 };
 
-const dashboardState = {
-  home: "100"
-};
-
 // Config slice
 export const userSlice = createSlice(
     {
         name: "user",
         initialState,
-        reducers: {
-            updateUsername: (state, action) => {
+        reducers: { 
+            updateUser: (state, action) => {
                 state.username = action.payload || initialState.username;
             },
             updateInfo: (state, action) => {
@@ -38,24 +34,15 @@ export const userSlice = createSlice(
                 state.infos = action.payload;
             },
         }
-    },
-    {
-        name: "dashboard",
-        dashboardState,
-        reducers: {
-            updateDashboard: (state, action) => {
-                state.home = action.payload || 'home1';
-            }
-        }
     }
 );
 
-console.log(userSlice, 'userSliceuserSlice');
-var rs = userSlice.actions.updateUsername;
-console.log(rs, 'rs2');
+// var act1= userSlice.actions.updateDashboard;
+// debugger
+// console.log(act1.updateUser, 'updateUser1');
 
 // Export actions
-export const { updateUsername, updateInfo, updateInfos } = userSlice.actions;
+export const { updateUser, updateInfo, updateInfos } = userSlice.actions;
 
 // Select state username from slice
 export const selectUsername = state => state.user.username;

@@ -7,21 +7,21 @@ import {
 } from "react-router-dom";
 
 import Dashboard from "./pages/Dashboard.js";
-import Login from "./pages/Login.js";
+import Home from "./pages/Home.js";
 
 export default function App() {
   return (
     <Router>
       <Switch>
-        <Route path="/login">
-          <Login />
+        <Route path="/home">
+          <Home />
         </Route>
 
         <Route path="/dashboard">
           <Dashboard />
         </Route>
 
-        <Redirect to="/login" />
+        <Redirect to="/home" />
       </Switch>
     </Router>
   );
