@@ -7,12 +7,14 @@ import axios from "axios";
 import _ from 'lodash';
 import { Modal, ModalBody, ModalHeader, UncontrolledCarousel, Carousel, CarouselCaption, CarouselControl, CarouselIndicators, CarouselItem } from 'reactstrap';
 import { useDispatch } from 'react-redux';
-
+import { updateUser, updateInfo } from './../store/userSlice';
 
 export default function Dashboard() {
+    const API_URL = "http://localhost:3000";
     const [open, setOpen] = useState(false);
+    const [openEdit, setOpenEdit] = useState(false);
+    const [gameEdit, setGameEdit] = useState({});
     const [gameDetail, setGameDetail] = useState({});
-
     const dispatch = useDispatch();
 
     // Select username from store
@@ -21,21 +23,52 @@ export default function Dashboard() {
     var infos = useSelector(selectInfos);
         infos = _.orderBy(infos, ['id'],['desc']);
 
-    const showModal = (e, appid) => {
+    useEffect(() => {
+        console.log(gameDetail, 'gameDetail_use_effect');
+    }, [gameDetail])
+
+    const showModalDetail = (e, appid) => {
         e.preventDefault();
-        axios.get('https://store.steampowered.com/api/appdetails?appids='+appid)
+        axios.get('https://store.steampowered.com/api/appdetails', {
+            params: {
+                appids: appid,
+                l: 'english'
+            }
+        })
         .then(function (res) {
             let data = res?.data?.[appid]?.data;
             setGameDetail(data);
-            console.log(gameDetail, 'gameDetailgameDetail');
 
             setOpen(true);
             // debugger
-            // dispatch(updateInfos(infos));
-
         })
         .catch(function (error) {
-            console.log(error);
+        });
+    }
+
+
+    const showModalEdit = (e, item) => {
+        e.preventDefault();
+        setGameEdit(item);
+        setOpenEdit(true);
+    }
+
+    const deleteItem = (e, item) => {
+        e.preventDefault();
+        console.log(item, 'item1111');
+
+        axios.delete(`${API_URL}/infos/${item.id}`)
+        .then(function (response) {
+            axios.get('http://localhost:3000/infos')
+                .then(function (res) {
+                    infos = res?.data || [];
+                    dispatch(updateInfos(infos));
+                    setOpenEdit(false);
+                })
+                .catch(function (error) {
+                });
+        })
+        .catch(function (error) {
         });
     }
 
@@ -44,37 +77,57 @@ export default function Dashboard() {
         screenshots = screenshots.map((item, index) => {
             return {
                 ...item,
-                // altText: 'Slide 1', 
-                caption: 'Slide '+(index+1),
+                altText: 'Slide '+(index+1),
+                // caption: 'Slide '+(index+1),
+                caption: '',
                 key: index,
                 // src: item.path_thumbnail
                 src: item.path_full
             }
         })
+        // screenshots = screenshots.slice(0, 2);
         console.log(screenshots, 'screenshotssss');
         return screenshots;
-        debugger
     }
 
-    // var infos = [
-        // {
-        // "id": 1,
-        // "name": "the last of us",
-        // "type": "rpg",
-        // "version": "1.01"
-        // }
-    // ];
+    const handleChangeInfo = (e) => {
+        const { name, value } = e.target;
+        setGameEdit(prevState => ({
+            ...prevState,
+            [name]: value
+        }));
+        console.log(gameEdit, 'infoinfo_edit');
+    }
+
+    const handleUpdateInfo = (e) => {
+        e.preventDefault(); 
+        axios.put(`${API_URL}/infos/${gameEdit.id}`, gameEdit)
+            .then(function (response) {
+                axios.get('http://localhost:3000/infos')
+                    .then(function (res) {
+                        infos = res?.data || [];
+                        dispatch(updateInfos(infos));
+                        setOpenEdit(false);
+                    })
+                    .catch(function (error) {
+                    });
+            })
+            .catch(function (error) {
+               debugger
+            });
+    }
+
 
     useEffect(() => {
-        axios.get('http://localhost:3000/infos')
+        axios.get('http://localhost:3000/infos?_embed=posts')
             .then(function (res) {
                 infos = res?.data || [];
                 dispatch(updateInfos(infos));
 
-                console.log(infos, 'infos');
+                // console.log(infos, 'infos');
             })
             .catch(function (error) {
-                console.log(error);
+                debugger
             });
     }, []);
 
@@ -95,20 +148,21 @@ export default function Dashboard() {
                 <table className="table">
                     <thead>
                         <tr>
-                            <th>#</th>
+                            <th className="w_5p">#</th>
                             <th>AppID</th>
                             <th>Type</th>
                             <th>Name</th>
+                            <th>Required age</th>
                             <th>Version</th>
+                            <th>Price</th>
                             <th>Image</th>
                             <th>DLC</th>
-                            <th>Detail</th>
+                            <th className="text-center">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         {   
                             infos.map((item, index) => {
-                                // console.log(item, 'iem');
                                 let url = `https://steamcdn-a.akamaihd.net/steam/apps/${item.appid}/header.jpg`
 
                                 return (
@@ -117,13 +171,23 @@ export default function Dashboard() {
                                         <th>{item.appid}</th>
                                         <td>{item.type}</td>
                                         <td>{item.name}</td>
+                                        <td>{item.required_age || 0}</td>
                                         <td>{item.version}</td>
+                                        <td className="text-success fw-bold">{item.price || '1000đ'}</td>
                                         <td>
                                             <a href="#" > <img className="img-fluid img-thumbnail" style={{maxWidth:'120px'}}  src={url} /> </a>
                                         </td>
                                         <td>DLC</td>
                                         <td>
-                                            <button onClick={(e) => showModal(e, item.appid)} className="btn btn-sm btn-primary"> <i className="fas fa-info-circle"></i> </button>
+                                            <button onClick={(e) => showModalDetail(e, item.appid)} className="btn btn-sm btn-primary mr-10">
+                                                <i className="fas fa-info-circle"></i>
+                                            </button>
+                                            <button onClick={(e) => showModalEdit(e, item)} className="btn btn-sm btn-primary mr-10">
+                                                <i className="fas fa-edit"></i>
+                                            </button>
+                                            <button onClick={(e) => deleteItem(e, item)} className="btn btn-sm btn-danger">
+                                                <i className="fas fa-trash"></i>
+                                            </button>
                                         </td>
                                     </tr> 
                                 )
@@ -133,6 +197,7 @@ export default function Dashboard() {
                 </table>
             </div>
 
+            {/* modal detail */}
             <Modal 
                 size="xl"
                 isOpen={open}
@@ -146,91 +211,106 @@ export default function Dashboard() {
                         items={renderScreenshot()}
                     />
 
-                    <p dangerouslySetInnerHTML={{__html: gameDetail?.detailed_description }}></p>
+                    <iframe 
+                        src={"https://store.steampowered.com/widget/"+gameDetail.steam_appid}
+                        className="mt-3"
+                        frameBorder="0"
+                        width="100%"
+                        height="190"
+                        seamless="seamless"
+                        sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation">
+                    </iframe>         
 
-                    {/* <Carousel
-                        activeIndex={0}
-                        dark
-                        next={function noRefCheck(){}}
-                        previous={function noRefCheck(){}}
-                        >
-                        <CarouselIndicators
-                            activeIndex={0}
-                            items={[
-                            {
-                                altText: 'Slide 1',
-                                caption: 'Slide 1',
-                                key: 1,
-                                src: 'https://picsum.photos/id/123/1200/600'
-                            },
-                            {
-                                altText: 'Slide 2',
-                                caption: 'Slide 2',
-                                key: 2,
-                                src: 'https://picsum.photos/id/456/1200/600'
-                            },
-                            {
-                                altText: 'Slide 3',
-                                caption: 'Slide 3',
-                                key: 3,
-                                src: 'https://picsum.photos/id/678/1200/600'
-                            }
-                            ]}
-                            onClickHandler={function noRefCheck(){}}
-                        />
-                        <CarouselItem
-                            onExited={function noRefCheck(){}}
-                            onExiting={function noRefCheck(){}}
-                        >
-                            <img
-                            alt="Slide 1"
-                            src="https://picsum.photos/id/123/1200/600"
-                            />
-                            <CarouselCaption
-                            captionHeader="Slide 1"
-                            captionText="Slide 1"
-                            />
-                        </CarouselItem>
-                        <CarouselItem
-                            onExited={function noRefCheck(){}}
-                            onExiting={function noRefCheck(){}}
-                        >
-                            <img
-                            alt="Slide 2"
-                            src="https://picsum.photos/id/456/1200/600"
-                            />
-                            <CarouselCaption
-                            captionHeader="Slide 2"
-                            captionText="Slide 2"
-                            />
-                        </CarouselItem>
-
-                        <CarouselControl
-                            direction="prev"
-                            directionText="Previous"
-                            onClickHandler={function noRefCheck(){}}
-                        />
-
-                        <CarouselControl
-                            direction="next"
-                            directionText="Next"
-                            onClickHandler={function noRefCheck(){}}
-                        />
-                    </Carousel>
-                */}            
+                    <p 
+                        className="detail_des"
+                        dangerouslySetInnerHTML={{__html: gameDetail?.detailed_description }}
+                    ></p>
 
                     <p dangerouslySetInnerHTML={{__html: gameDetail?.pc_requirements?.minimum }}></p>
 
                     <p dangerouslySetInnerHTML={{__html: gameDetail?.pc_requirements?.recommended }}></p>
 
-                    <figure class="text-end">
-                        <blockquote class="blockquote">
+                    <figure className="text-end">
+                        <blockquote className="blockquote">
                             <p>A well-known quote, contained in a blockquote element.</p>
                         </blockquote>
-                        <figcaption class="blockquote-footer">
+                        <figcaption className="blockquote-footer">
                             Someone famous in <cite title="Source Title">Source Title</cite>
                         </figcaption>
                     </figure>
+                </ModalBody>
+            </Modal>
+
+
+            {/* modal edit */}
+            <Modal 
+                size="xl"
+                isOpen={openEdit}
+                toggle={() => setOpenEdit(false)}
+            >
+                <ModalHeader>
+                    Edit info: <span className="fw-bold fst-italic"> {gameEdit?.name} </span>
+                </ModalHeader>
+                <ModalBody>
+                <form className="">
+                    <div className="mt-1">
+                        <label htmlFor="" className="form-label">Type</label>
+                        <select
+                            name="type"
+                            className="form-control"
+                            type="text"
+                            placeholder="Type"
+                            value={gameEdit?.type || ''}
+                            onChange={handleChangeInfo}
+                        >
+                            <option value="RPG">RPG</option>
+                            <option value="Openworld">Openworld</option>
+                            <option value="Horror">Horror</option>
+                        </select>
+                    </div>
+                    {/* <div className="box_autocomplete mt-1">
+                        <label htmlFor="" className="form-label">Name</label>
+                   
+                        <ReactSearchAutocomplete
+                            items={steamList}
+                            onSearch={handleOnSearch}
+                            onHover={handleOnHover}
+                            onSelect={handleOnSelect}
+                            onFocus={handleOnFocus}
+                            autoFocus
+                            formatResult={formatResult}
+                        />
+                    </div> */}
+                    <div className="mt-2">
+                        <label htmlFor="" className="form-label">Version</label>
+                        <input
+                            name="version"
+                            className="form-control"
+                            type="text"
+                            placeholder="Version"
+                            value={gameEdit?.version || ''}
+                            onChange={(e) => handleChangeInfo(e)}
+                        />
+                    </div>
+                    <div className="mt-2">
+                        <label htmlFor="" className="form-label">Link</label>
+                        <input
+                            name="link"
+                            className="form-control"
+                            type="text"
+                            placeholder="Link"
+                            value={gameEdit?.image_url || 'https://i.imgur.com/2XBqLsa.jpg'}
+                            onChange={(e) => handleChangeInfo(e)}
+                        />
+                    </div>
+
+                    <div className="mt-2">
+                        <label htmlFor="" className="form-label me-2">Image</label>
+                        <img className="img-fluid img-thumbnail" style={{maxWidth:'200px'}}  src={gameEdit?.image_url} />
+                    </div>      
+
+                    <button className="btn btn-sm btn-primary mt-2 float-end d-block" onClick={(e) => handleUpdateInfo(e)}>update info</button>
+                </form>
                 </ModalBody>
             </Modal>
         </>

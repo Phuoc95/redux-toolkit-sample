@@ -9,14 +9,43 @@ import { Modal, ModalBody, ModalHeader } from 'reactstrap';
 import { selectInfoDashboard } from '../store/dashboardSlide';
 
 
-export default function Home() {
-    debugger
+export default function Home() {      
+    const API_URL = "http://localhost:3000";
+    const history = useHistory();
+    const dispatch = useDispatch();
+
+    const [username, setUsername] = useState('');
+    const [info, setInfo] = useState(
+        {
+            "appid": '',
+            "name": "",
+            "image_url": "https://steamcdn-a.akamaihd.net/steam/apps/1238810/header.jpg",
+            "type": "Openworld",
+            "version": "1.2",
+            "required_age": "1",
+        }
+    );
+    const [gameDetail, setGameDetail] = useState({});
+    const [steamList, setSteamList] = useState([1]);
+    // console.log(steamList, 'init arr steam');
+
+    var stateDash = useSelector(selectInfoDashboard);
     useEffect(() => {
-        axios.get('http://api.steampowered.com/ISteamApps/GetAppList/v0002/?format=json')
+        //check state dashboardSlide
+        console.log(info, 'info1');
+    }, [info])
+
+    useEffect(() => {
+        axios.get('http://api.steampowered.com/ISteamApps/GetAppList/v0001/?format=json')
             .then(function (res) {
                 // debugger
-                let list = res?.data?.applist?.apps || [];
-                list = list.slice(0, 60000);
+                // v0001
+                let list = res?.data.applist.apps.app || [];
+
+                // //v0002
+                // let list = res?.data?.applist?.apps || [];      
+
+                list = list.slice(0, 90000);
                 list = list.map(item => {
                     return {
                         ...item,
@@ -26,37 +55,14 @@ export default function Home() {
                 console.log(list, 'listtt');
 
                 setSteamList(list);
-                debugger
                 // dispatch(updateInfos(infos));
 
             })
             .catch(function (error) {
                 console.log(error);
-                debugger
             });
     }, []);
     // console.log(steamList, 'steamListsteamList');
-    
-    const [username, setUsername] = useState('');
-    const [info, setInfo] = useState(
-        {
-            "appid": '',
-            "name": "",
-            "image_url": "https://steamcdn-a.akamaihd.net/steam/apps/1238810/header.jpg",
-            "type": "Openworld",
-            "version": "1.2",
-        }
-    );
-    const [gameDetail, setGameDetail] = useState({});
-    const [steamList, setSteamList] = useState([1]);
-    // console.log(steamList, 'init arr steam');
-
-    // var stateDash = useSelector(selectInfoDashboard);
-    // useEffect(() => {
-    //     //check state dashboardSlide
-    //     console.log(stateDash, 'stateDash1');
-    // }, [stateDash])
-
 
 
     // chunkArrayInGroups
@@ -87,24 +93,32 @@ export default function Home() {
         let image_url = `https://steamcdn-a.akamaihd.net/steam/apps/${item.appid}/header.jpg`;
         let {appid, name} = item ;
         setInfo(prevState => {
-            console.log(preState, 'preSstaet');
+            console.log(prevState, 'preSstaet');
             return ({
                 ...prevState,
                 image_url,
                 appid,
-                name
+                name,
             })
         });
 
         axios.get('https://store.steampowered.com/api/appdetails?appids='+appid)
             .then(function (res) {
                 let data = res?.data?.[appid]?.data;
+                let {required_age, price_overview} = data;
+                debugger
+                console.log(required_age, 'required_age');
                 setGameDetail(data);
-                console.log(gameDetail, 'gameDetailgameDetail');
+                setInfo(prevState => {
+                    return ({
+                        ...prevState,
+                        required_age,
+                        price: price_overview?.final_formatted || '1đ'
+                    })
+                });
 
                 // debugger
                 // dispatch(updateInfos(infos));
-
             })
             .catch(function (error) {
                 console.log(error);
@@ -127,9 +141,6 @@ export default function Home() {
       }
     
     // useEffect(() => console.log(username, 11111), [username]);
-
-    const history = useHistory();
-    const dispatch = useDispatch();
 
     const handleChangeInfo = (e) => {
         const { name, value } = e.target;
@@ -167,11 +178,8 @@ export default function Home() {
 
     const gotoDash = (e) => {
         e.preventDefault();
-        // debugger
-        dispatch(updateDashboard('new_home'));
-       
-
-        // history.push('/dashboard');
+        dispatch(updateDashboard('new_dashboard'));
+        history.push('/dashboard');
     }
 
     return (
@@ -236,6 +244,30 @@ export default function Home() {
                         />
                     </div>
                     <div className="mt-2">
+                        <label htmlFor="" className="form-label">Price</label>
+                        <input
+                            readOnly
+                            name="price"
+                            className="form-control"
+                            type="text"
+                            placeholder=""
+                            value={info?.price || 0}
+                            onChange={(e) => handleChangeInfo(e)}
+                        />
+                    </div>
+                    <div className="mt-2">
+                        <label htmlFor="" className="form-label">Required age</label>
+                        <input
+                            readOnly
+                            name="required_age"
+                            className="form-control"
+                            type="text"
+                            placeholder=""
+                            value={info?.required_age || 0}
+                            onChange={(e) => handleChangeInfo(e)}
+                        />
+                    </div>
+                    <div className="mt-2">
                         <label htmlFor="" className="form-label">Version</label>
                         <input
                             name="version"
@@ -283,8 +315,8 @@ export default function Home() {
                     }
                 
                     <button className="btn btn-sm btn-primary me-2 mt-2" onClick={(e) => handleUpdateInfo(e)}>update info</button>
-                    <button className="btn btn-sm btn-info me-2 mt-2" onClick={() => gotoInfo()}>goto info</button>
                     <button className="btn btn-sm btn-info me-2 mt-2" onClick={(e) => gotoDash(e)}>goto dash</button>
+                    {/* <button className="btn btn-sm btn-info me-2 mt-2" onClick={() => gotoInfo()}>goto info</button> */}
                 </form>
             </div>
         </>
